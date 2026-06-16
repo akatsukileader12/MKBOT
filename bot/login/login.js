@@ -1,16 +1,36 @@
 /**
  * MKBOT – Facebook Login
  * @author Charles MK
- * Uses fca-unofficial to log in via cookies from account.txt.
+ * Uses ws3-fca to log in via cookies from account.txt.
+ *
+ * Cookie normalisation: browser-exported cookies often have domain
+ * "www.facebook.com" but fca makes requests to "www.messenger.com".
+ * We duplicate every facebook.com cookie as a messenger.com cookie so
+ * tough-cookie never rejects them.
  */
 
 const fs      = require("fs-extra");
 const path    = require("path");
-const login   = require("fca-unofficial");
+const login   = require("ws3-fca");
 const log     = require("../../logger/log");
 const Loading = require("../../logger/loading");
 
 const accountPath = path.join(process.cwd(), "account.txt");
+
+/* ─── Normalise cookies so messenger.com requests work ─────── */
+function normalizeCookies(appState) {
+  const extra = [];
+  for (const cookie of appState) {
+    const domain = (cookie.domain || "").toLowerCase();
+    if (domain.includes("facebook.com")) {
+      extra.push({
+        ...cookie,
+        domain: domain.replace("facebook.com", "messenger.com"),
+      });
+    }
+  }
+  return [...appState, ...extra];
+}
 
 function getAppState() {
   if (!fs.existsSync(accountPath)) {
@@ -20,12 +40,13 @@ function getAppState() {
 
   const raw = fs.readFileSync(accountPath, "utf-8").trim();
   if (!raw || raw.includes("YOUR_SB_VALUE")) {
-    log.error("LOGIN", "account.txt contains placeholder cookies. Please replace with your real Facebook cookies.");
+    log.error("LOGIN", "account.txt contains placeholder cookies. Please replace with your real cookies.");
     process.exit(1);
   }
 
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return normalizeCookies(parsed);
   } catch {
     log.error("LOGIN", "account.txt is not valid JSON. Please check the format.");
     process.exit(1);
@@ -59,7 +80,6 @@ function doLogin(config) {
       loader.success("Logged in to Facebook");
       log.success("LOGIN", `Bot ID: ${api.getCurrentUserID()}`);
 
-      // Set API options
       api.setOptions({
         listenEvents: true,
         selfListen: false,
@@ -68,9 +88,11 @@ function doLogin(config) {
         autoMarkRead: false,
       });
 
-      // Save updated cookies
+      // Save refreshed cookies back (facebook.com entries only, no duplicates)
       try {
-        fs.writeFileSync(accountPath, JSON.stringify(api.getAppState(), null, 2));
+        const fresh = (api.getAppState() || [])
+          .filter(c => !(c.domain || "").includes("messenger.com"));
+        fs.writeFileSync(accountPath, JSON.stringify(fresh, null, 2));
       } catch {
         log.warn("LOGIN", "Could not save updated cookies to account.txt");
       }
