@@ -60,7 +60,7 @@ module.exports = {
         `🔹 Version  : v${c.version || "1.0"}\n` +
         `🔹 Author   : ${c.author || "Charles MK"}\n` +
         `🔹 Category : ${c.category || "others"}\n` +
-        `🔹 Role     : ${["User", "Mod", "Admin", "Premium", "Dev"][c.role || 0]}\n` +
+        `🔹 Role     : ${["User", "Premium", "Admin", "Dev"][c.role || 0] || "Dev"}\n` +
         `━━━━━━━━━━━━━━━━━━\n` +
         `📝 ${desc}\n` +
         `━━━━━━━━━━━━━━━━━━\n` +
