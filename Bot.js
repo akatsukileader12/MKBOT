@@ -148,6 +148,22 @@ function setupAutoRestart() {
 
   await startListening(api);
 
+  // Notify admin on startup — confirms fresh cookies are working
+  const adminID = config.adminBot?.[0];
+  if (adminID) {
+    try {
+      await api.sendMessage(
+        `✅ MKBOT is online!\n` +
+        `🤖 ID: ${global.GoatBot.botID}\n` +
+        `⚡ Prefix: "${config.prefix}"\n` +
+        `📦 Commands: ${global.GoatBot.commands.size} | Events: ${global.GoatBot.eventCommands.size}`,
+        adminID
+      );
+    } catch (e) {
+      log.warn('MKBOT', `Could not send startup DM: ${e.message}`);
+    }
+  }
+
   log.success("MKBOT", `Bot is live! ID: ${global.GoatBot.botID}  Prefix: "${config.prefix}"`);
   log.success("MKBOT", `Commands loaded: ${global.GoatBot.commands.size}  Events: ${global.GoatBot.eventCommands.size}`);
 })();
