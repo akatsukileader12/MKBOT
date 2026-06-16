@@ -1,0 +1,33 @@
+{
+  "name": "mkbot",
+  "version": "1.0.0",
+  "description": "MKBOT - A Facebook Messenger Bot by Charles MK",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.x",
+    "npm": ">=7.0.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "NODE_ENV=development node index.js",
+    "prod": "NODE_ENV=production node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2",
+    "fca-unofficial": "^1.7.22",
+    "fs-extra": "^11.2.0",
+    "gradient-string": "^2.0.2",
+    "mongoose": "^8.0.0",
+    "moment-timezone": "^0.5.45",
+    "node-cron": "^3.0.3",
+    "ora": "^5.4.1",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "pm2": "^5.3.1"
+  },
+  "author": "Charles MK",
+  "license": "MIT",
+  "keywords": ["facebook", "messenger", "bot", "mkbot", "charles-mk"]
+}
