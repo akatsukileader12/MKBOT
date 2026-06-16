@@ -30,6 +30,15 @@ const { loadCommands, loadEvents } = require("./bot/utils/loadScripts");
 const startListening  = require("./bot/handleListening");
 const utils           = require("./utils");
 
+/* ─── Keepalive HTTP server — starts immediately so Render's port scan passes ── */
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end(`MKBOT is running. Uptime: ${utils.formatUptime(Date.now() - (global.GoatBot?.startTime || Date.now()))}`);
+}).listen(PORT, "0.0.0.0", () => {
+  log.info("SERVER", `Keepalive server listening on port ${PORT}`);
+});
+
 /* ─── Validate config.json ──────────────────────────────────- */
 const configPath = path.join(__dirname, "config.json");
 const configCommandsPath = path.join(__dirname, "configCommands.json");
@@ -141,13 +150,4 @@ function setupAutoRestart() {
 
   log.success("MKBOT", `Bot is live! ID: ${global.GoatBot.botID}  Prefix: "${config.prefix}"`);
   log.success("MKBOT", `Commands loaded: ${global.GoatBot.commands.size}  Events: ${global.GoatBot.eventCommands.size}`);
-
-  /* ─── Keepalive HTTP server (required for Render Web Service) ── */
-  const PORT = process.env.PORT || 3000;
-  http.createServer((req, res) => {
-    res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end(`MKBOT is running. Uptime: ${utils.formatUptime(Date.now() - global.GoatBot.startTime)}`);
-  }).listen(PORT, () => {
-    log.info("SERVER", `Keepalive server listening on port ${PORT}`);
-  });
 })();
