@@ -10,7 +10,7 @@ module.exports = {
     aliases: ["shutdown", "off"],
     version: "1.0",
     author: "Charles MK",
-    role: 4,
+    role: 3,
     shortDescription: "Shut down the bot (dev only)",
     category: "owner",
     guide: "{pn}",
