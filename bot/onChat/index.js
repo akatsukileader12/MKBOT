@@ -18,7 +18,8 @@ module.exports = async function handleChat({ api, event }) {
   let prefix = config.prefix || "/";
   try {
     const thread = await db.threadsData.get(event.threadID);
-    if (thread?.prefix) prefix = thread.prefix;
+    if (thread?.data?.prefix) prefix = thread.data.prefix;
+    else if (thread?.prefix) prefix = thread.prefix;
   } catch { /* use default */ }
 
   /* ─── Ensure thread doc exists ──────────────────────────── */
@@ -39,6 +40,9 @@ module.exports = async function handleChat({ api, event }) {
             api, event, args: body.split(" "),
             message: makeMessage(api, event),
             reply: replyHandler,
+            usersData:   global.db.usersData,
+            threadsData: global.db.threadsData,
+            globalData:  global.db.globalData,
           });
         } catch (e) {
           log.error("CHAT", `onReply error [${replyHandler.commandName}]: ${e.message}`);
@@ -59,7 +63,10 @@ module.exports = async function handleChat({ api, event }) {
           await cmd.onReaction({
             api, event,
             message: makeMessage(api, event),
-            reaction: rxHandler,
+            Reaction: rxHandler,
+            usersData:   global.db.usersData,
+            threadsData: global.db.threadsData,
+            globalData:  global.db.globalData,
           });
         } catch (e) {
           log.error("CHAT", `onReaction error [${rxHandler.commandName}]: ${e.message}`);
@@ -70,11 +77,19 @@ module.exports = async function handleChat({ api, event }) {
   }
 
   /* ─── onChat hooks ──────────────────────────────────────── */
-  for (const hook of global.GoatBot.onChat) {
+  for (const hook of (global.GoatBot.onChat || [])) {
     try {
       const cmd = commands.get(hook);
       if (cmd?.onChat) {
-        await cmd.onChat({ api, event, args: body.split(" "), message: makeMessage(api, event), prefix });
+        await cmd.onChat({
+          api, event,
+          args: body.split(" "),
+          message: makeMessage(api, event),
+          prefix,
+          usersData:   global.db.usersData,
+          threadsData: global.db.threadsData,
+          globalData:  global.db.globalData,
+        });
       }
     } catch (e) {
       log.error("CHAT", `onChat error [${hook}]: ${e.message}`);
@@ -85,26 +100,40 @@ module.exports = async function handleChat({ api, event }) {
   if (!body.startsWith(prefix)) return;
 
   const parts   = body.slice(prefix.length).trim().split(/\s+/);
-  const rawName = parts[0].toLowerCase();
+  const rawName = parts[0]?.toLowerCase();
   const args    = parts.slice(1);
+
+  if (!rawName) return;
 
   const cmdName = aliases.get(rawName) || rawName;
   const cmd     = commands.get(cmdName);
 
-  if (!cmd) return;
+  /* ─── Unknown command ───────────────────────────────────── */
+  if (!cmd) {
+    return api.sendMessage(
+      `❓ Unknown command: "${rawName}"\n` +
+      `💡 Type ${prefix}help to see all available commands.`,
+      event.threadID
+    );
+  }
 
   /* ─── Permission check ──────────────────────────────────── */
-  const role = cmd.config.role ?? 0;
+  // Role ladder: dev(3) > admin(2) > premium(1) > user(0)
+  const requiredRole = cmd.config.role ?? 0;
   const senderID = event.senderID;
 
   const utils = global.utils;
-  const userRole = utils.isDev(senderID) ? 4
-    : utils.isAdmin(senderID)            ? 2
-    : utils.isPremium(senderID)          ? 3
+  const userRole = utils.isDev(senderID)     ? 3
+    : utils.isAdmin(senderID)               ? 2
+    : utils.isPremium(senderID)             ? 1
     : 0;
 
-  if (userRole < role) {
-    return api.sendMessage("⛔ You don't have permission to use this command.", event.threadID);
+  if (userRole < requiredRole) {
+    const roleNames = { 1: "Premium", 2: "Bot Admin", 3: "Developer" };
+    return api.sendMessage(
+      `⛔ You need ${roleNames[requiredRole] || "higher"} permission to use this command.`,
+      event.threadID
+    );
   }
 
   /* ─── Admin-only mode check ─────────────────────────────── */
@@ -115,20 +144,24 @@ module.exports = async function handleChat({ api, event }) {
   }
 
   /* ─── Run command ───────────────────────────────────────── */
+  log.info("CHAT", `Dispatching command: ${cmdName} | from: ${senderID} | args: [${args.join(", ")}]`);
   try {
     await cmd.onStart({
       api,
       event,
       args,
       prefix,
+      role: userRole,
       message: makeMessage(api, event),
       usersData:   global.db.usersData,
       threadsData: global.db.threadsData,
       globalData:  global.db.globalData,
     });
   } catch (e) {
-    log.error("CHAT", `Command error [${cmdName}]: ${e.message}`);
-    api.sendMessage(`❌ Error: ${e.message}`, event.threadID);
+    log.error("CHAT", `Command error [${cmdName}]: ${e.message}\n${e.stack}`);
+    try {
+      await api.sendMessage(`❌ Error running "${cmdName}": ${e.message}`, event.threadID);
+    } catch { /* ignore send error */ }
   }
 };
 
@@ -143,5 +176,16 @@ function makeMessage(api, event) {
       api.setMessageReaction(emoji, messageID || event.messageID, null, true),
     unsend: (messageID) =>
       api.unsendMessage(messageID),
+    SyntaxError: (guide) => {
+      const cmd = global.GoatBot.commands.get(
+        Object.keys(Object.fromEntries(global.GoatBot.commands)).find(
+          k => global.GoatBot.commands.get(k) === global.GoatBot.commands.get(k)
+        )
+      );
+      return api.sendMessage(
+        `❌ Invalid usage.\n💡 Check ${global.GoatBot.config?.prefix || "/"}help for usage info.`,
+        event.threadID
+      );
+    },
   };
 }
