@@ -1,0 +1,9 @@
+node_modules/
+*.log
+logs/
+appstate.json
+account.txt
+tmp/
+.env
+.DS_Store
+Thumbs.db
