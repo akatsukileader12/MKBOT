@@ -11,13 +11,13 @@
   "language": "en",
   "timeZone": "Africa/Johannesburg",
   "adminBot": [
-    "YOUR_FACEBOOK_ID_HERE"
+    "61554168931047"
   ],
   "premiumUsers": [
-    "YOUR_FACEBOOK_ID_HERE"
+    "61554168931047"
   ],
   "devUsers": [
-    "YOUR_FACEBOOK_ID_HERE"
+    "61554168931047"
   ],
   "database": {
     "type": "mongodb",
