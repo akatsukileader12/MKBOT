@@ -62,7 +62,6 @@ function doLogin(config) {
       appState,
       userAgent: config.facebookAccount?.userAgent ||
         "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
-      logLevel: "silent",
       listenEvents: true,
       selfListen: false,
       autoMarkDelivery: false,
@@ -83,7 +82,6 @@ function doLogin(config) {
       api.setOptions({
         listenEvents: true,
         selfListen: false,
-        logLevel: "silent",
         autoMarkDelivery: false,
         autoMarkRead: false,
       });
